@@ -17,13 +17,10 @@ const (
 	procMountsRetries = 3
 )
 
-var (
-	bindRemountOpts = []string{"remount"}
-)
+var bindRemountOpts = []string{"remount"}
 
 // getDiskFormat uses 'lsblk' to see if the given disk is unformatted
 func (fs *FS) getDiskFormat(ctx context.Context, disk string) (string, error) {
-
 	args := []string{"-n", "-o", "FSTYPE", disk}
 
 	f := log.Fields{
@@ -64,8 +61,8 @@ func (fs *FS) getDiskFormat(ctx context.Context, disk string) (string, error) {
 func (fs *FS) formatAndMount(
 	ctx context.Context,
 	source, target, fsType string,
-	opts ...string) error {
-
+	opts ...string,
+) error {
 	opts = append(opts, "defaults")
 	f := log.Fields{
 		"source":  source,
@@ -96,7 +93,11 @@ func (fs *FS) formatAndMount(
 		}
 
 		if fsType == "ext4" || fsType == "ext3" {
-			args = []string{"-F", source}
+			args = []string{
+				"-F",  // Force flag
+				"-m0", // Zero blocks reserved for super-user
+				source,
+			}
 		}
 		f["fsType"] = fsType
 		log.WithFields(f).Info(
@@ -130,8 +131,8 @@ func (fs *FS) formatAndMount(
 func (fs *FS) bindMount(
 	ctx context.Context,
 	source, target string,
-	opts ...string) error {
-
+	opts ...string,
+) error {
 	err := fs.doMount(ctx, "mount", source, target, "", "bind")
 	if err != nil {
 		return err
@@ -141,7 +142,6 @@ func (fs *FS) bindMount(
 
 // getMounts returns a slice of all the mounted filesystems
 func (fs *FS) getMounts(ctx context.Context) ([]Info, error) {
-
 	_, hash1, err := fs.readProcMounts(ctx, procMountsPath, false)
 	if err != nil {
 		return nil, err
@@ -168,8 +168,8 @@ func (fs *FS) getMounts(ctx context.Context) ([]Info, error) {
 func (fs *FS) readProcMounts(
 	ctx context.Context,
 	path string,
-	info bool) ([]Info, uint32, error) {
-
+	info bool,
+) ([]Info, uint32, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, 0, err
